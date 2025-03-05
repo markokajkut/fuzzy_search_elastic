@@ -1,0 +1,25 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node  # Run in single-node mode
+      - bootstrap.memory_lock=true  # Lock memory for performance
+      - xpack.security.enabled=false  # Disable authentication for testing
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+
+volumes:
+  elastic_data:
+    driver: local
