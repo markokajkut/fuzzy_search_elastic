@@ -1,0 +1,7 @@
+.git
+.env
+__pycache__
+es_st_fuzzy
+docker-compose.yml
+testing.ipynb
+README.md

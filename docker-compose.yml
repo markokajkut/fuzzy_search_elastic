@@ -19,6 +19,26 @@ services:
           memory: 2g
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: ./
+    container_name: app
+    command: streamlit run /app/app.py --server.port 8501
+    volumes:
+      - ./:/app
+    ports:
+      - 8501:8501
+    image: fuzzy_search_streamlit:latest
+    env_file:
+      - .env
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
 
 volumes:
   elastic_data:
