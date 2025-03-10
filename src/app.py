@@ -1,15 +1,23 @@
 import os
-import logging
 import streamlit as st
 from elasticsearch import Elasticsearch
-from dotenv import load_dotenv
 from logger import MyLogger
 from fuzzy_worker import FuzzyWorker
+from omegaconf import OmegaConf
 
-load_dotenv()
+# Get the directory where the script is located
+this_dir = os.path.dirname(os.path.abspath(__file__))
 
+# Get the parent directory of the script directory
+parent_dir = os.path.dirname(this_dir)
+
+# Path to the configuration file
+config_path = os.path.join(parent_dir, "conf", "config.yaml")
+
+# Config
+cfg = OmegaConf.load(config_path)
+# Logger
 my_logger = MyLogger().get_logger()
-logging.getLogger("streamlit").setLevel(logging.ERROR)
 
 st.set_page_config(
     page_title="Fuzzy Search",
@@ -24,57 +32,42 @@ st.set_page_config(
 )
 
 if 'es_client' not in st.session_state:
-    st.session_state['es_client'] = Elasticsearch(os.getenv("ES_HOST"), basic_auth=(os.getenv("ES_USER"), os.getenv("ES_PASS")))
-
-fuzzy_worker = FuzzyWorker(my_logger, st.session_state['es_client'])
-
-if "index_selection" not in st.session_state:
-    st.session_state["index_selection"] = fuzzy_worker.get_all_indexes()
+    st.session_state['es_client'] = Elasticsearch(cfg.elasticsearch.host, basic_auth=(cfg.elasticsearch.user, cfg.elasticsearch.password))
     
 # Initialize search filters if not already in session state
 if "search_filters" not in st.session_state:
     st.session_state["search_filters"] = {}
 
-# Check for creation of new indexes
-@st.fragment(run_every="30s")
-def fetch_latest_indexes():
-    new_indexes_fetch = fuzzy_worker.get_all_indexes()
-    if new_indexes_fetch != st.session_state["index_selection"]:
-        st.session_state["index_selection"] = new_indexes_fetch
-        st.info("New Elasticsearch index found. Please refresh the page.")
-
 # Function to reset search filters
 def reset_search_filters(fields):
+    """Reset fuzzy search filters stored as cached session state variables"""
     for field in fields:
         if field in st.session_state:
             del st.session_state[field]  # Remove field from session state
     st.session_state["search_filters"] = {}  # Reset dictionary
 
 def main():
+    """Main part of the streamlit app"""
+    fuzzy_worker = FuzzyWorker(my_logger, st.session_state['es_client'])
 
-    st.html("<div style='text-align: center; font-size: 32px; font-weight: bold;'>Search for Keywords</div>")
+    st.html("<div style='text-align: center; font-size: 32px; font-weight: bold;'>Fuzzy Search Elastic</div>")
     
-    with st.sidebar:
+    index_name = fuzzy_worker.get_index()
+    if index_name:
+        with st.sidebar:
         
+            st.subheader("Index Name")
+            st.markdown(f"***{index_name}***")
         
-        index_selection = st.selectbox(
-        "Select Elasticsearch index to visualize",
-        st.session_state["index_selection"]
-        )
-        
-        if index_selection not in st.session_state:
-            st.session_state[index_selection] = fuzzy_worker.get_data_from_es_index(index_selection)
-        
-        fetch_latest_indexes()
-                
-        st.write("---")
-        
-        reset_filters = st.button("Reset Filters", type="primary")
+            if "df" not in st.session_state:
+                st.session_state["df"] = fuzzy_worker.get_data_from_es_index(index_name)
+                            
+            st.write("---")
+            
+            reset_filters = st.button("Reset Filters", type="primary")
 
-    
-    if index_selection:
         # Get the fields from Elasticsearch
-        fields = fuzzy_worker.get_index_fields(index_name=index_selection)
+        fields = fuzzy_worker.get_index_fields(index_name=index_name)
 
         # Ensure fields exist in session state before rendering widgets
         for field in fields:
@@ -84,8 +77,8 @@ def main():
 
         if len(fields) > 0:
             # Create dynamic column layout with a max of 3 columns
-            num_columns = min(3, len(fields))  # Max 3 columns
-            columns = st.columns(num_columns)  # Create columns dynamically
+            num_columns = min(3, len(fields))
+            columns = st.columns(num_columns)
 
         # Loop through fields and distribute across columns
         for i, field in enumerate(fields):
@@ -99,15 +92,15 @@ def main():
 
         if reset_filters:
             reset_search_filters(fields)
-            st.rerun()  # Force UI refresh
+            st.rerun()
 
         search_filters = {field: value for field, value in st.session_state["search_filters"].items() if value.strip()}
 
 
         if not search_filters:  # If no filters applied, show full dataset
-            df = st.session_state[index_selection]
+            df = st.session_state["df"]
         else:  # If filters are applied, perform search
-            df = fuzzy_worker.multi_search_elasticsearch(index_name=index_selection, queries=search_filters, fields=list(search_filters.keys()))
+            df = fuzzy_worker.multi_search_elasticsearch(index_name=index_name, queries=search_filters, fields=list(search_filters.keys()))
 
         st.dataframe(df)
         

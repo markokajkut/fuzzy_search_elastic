@@ -1,5 +1,5 @@
 elasticsearch==8.17.2
 loguru==0.7.3
 pandas==2.2.3
-python-dotenv==1.0.1
-streamlit==1.42.2
+streamlit==1.42.0
+omegaconf==2.3.0

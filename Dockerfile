@@ -12,9 +12,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /root/.cache/pip
 
-COPY fuzzy_worker.py app.py logger.py  requirements.txt /app/
+COPY requirements.txt /app/
 
 RUN pip3 install -r requirements.txt
+
+COPY src/*.py /app/src/
 
 EXPOSE 8501
 

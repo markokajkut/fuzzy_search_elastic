@@ -2,6 +2,8 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.7.0
     container_name: elasticsearch
+    env_file:
+      - .env
     environment:
       - discovery.type=single-node  # Run in single-node mode
       - bootstrap.memory_lock=true  # Lock memory for performance
@@ -25,20 +27,20 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
-    build: ./
-    container_name: app
-    command: streamlit run /app/app.py --server.port 8501
-    volumes:
-      - ./:/app
-    ports:
-      - 8501:8501
-    image: fuzzy_search_streamlit:latest
-    env_file:
-      - .env
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+  # app:
+  #   build: ./
+  #   container_name: app
+  #   command: python /app/src/add_csv.py && streamlit run /app/src/app.py --server.port 8501
+  #   volumes:
+  #     - ./:/app
+  #   ports:
+  #     - 8501:8501
+  #   image: fuzzy_search_streamlit:latest
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     elasticsearch:
+  #       condition: service_healthy
 
 volumes:
   elastic_data:

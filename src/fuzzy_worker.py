@@ -1,8 +1,5 @@
 import pandas as pd
-from dotenv import load_dotenv
-
-load_dotenv()
-
+from typing import List, Dict, Union
 
 class FuzzyWorker():
     def __init__(self, logger, es_client):
@@ -10,7 +7,7 @@ class FuzzyWorker():
         self.es_client = es_client
 
 
-    def index_to_es(self, df, index_name):
+    def index_to_es(self, df: pd.DataFrame, index_name: str) -> None:
         """Index dataframe to Elasticsearch"""
         # Create index if not exists
         if not self.es_client.indices.exists(index=index_name):
@@ -26,7 +23,7 @@ class FuzzyWorker():
             self.logger.info(f"{response}")
             
     
-    def get_data_from_es_index(self, index_name):
+    def get_data_from_es_index(self, index_name: str) -> pd.DataFrame:
         """Retrieve all documents from an Elasticsearch index and return a DataFrame."""
         if index_name:
             # Create index if not exists
@@ -58,10 +55,9 @@ class FuzzyWorker():
 
                 # Convert to DataFrame
                 df = pd.DataFrame(data)
-                # df = self.clean_dataframe(df)
                 return df
     
-    def search_elasticsearch(self, query, column):
+    def search_elasticsearch(self, query: str, column: str) -> pd.DataFrame:
         """Perform a fuzzy search to one field in Elasticsearch index, with fuzziness level 2"""
         search_body = {
             "query": {
@@ -81,7 +77,12 @@ class FuzzyWorker():
 
         return df
     
-    def multi_search_elasticsearch(self, index_name, queries, fields):
+    def multi_search_elasticsearch(
+        self, 
+        index_name: str, 
+        queries: Union[List[str], Dict[str, str]], 
+        fields: List[str]
+    ) -> pd.DataFrame:
         """Perform a fuzzy search to more fields in Elasticsearch index, with fuzziness level 2"""
         # If queries is a list, create should conditions for all fields
         if isinstance(queries, list):
@@ -117,16 +118,16 @@ class FuzzyWorker():
         
         return df
     
-    def get_all_indexes(self):
+    def get_index(self) -> List[str]:
         """Get all indexes from Elasticsearch instance"""
         try:
-            indices = self.es_client.cat.indices(format="json")  # Fetch index metadata in JSON format
-            return [index["index"] for index in indices]  # Extract index names
+            index = self.es_client.cat.indices(format="json")  # Fetch index metadata in JSON format
+            return index[0]['index']  # Extract index names
         except Exception as e:
             print(f"Error retrieving indexes: {e}")
-            return []
+            return None
 
-    def get_index_fields(self, index_name):
+    def get_index_fields(self, index_name: str) -> List[str]:
         """Get all fields from one Elasticsearch index"""
         try:
             mapping = self.es_client.indices.get_mapping(index=index_name)  # Get index mapping
