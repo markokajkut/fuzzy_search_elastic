@@ -7,3 +7,11 @@ docker-clean:
 # Build Elasticsearch and Streamlit with Docker Compose
 docker-up:
 	docker compose up -d
+
+# Do above steps in one command
+docker-reset: docker-clean docker-up
+
+docker-down:
+	docker compose down --volumes --remove-orphans
+
+

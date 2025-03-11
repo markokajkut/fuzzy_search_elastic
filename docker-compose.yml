@@ -18,7 +18,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: 4g
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
     healthcheck:
@@ -27,20 +27,21 @@ services:
       timeout: 5s
       retries: 5
 
-  # app:
-  #   build: ./
-  #   container_name: app
-  #   command: python /app/src/add_csv.py && streamlit run /app/src/app.py --server.port 8501
-  #   volumes:
-  #     - ./:/app
-  #   ports:
-  #     - 8501:8501
-  #   image: fuzzy_search_streamlit:latest
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     elasticsearch:
-  #       condition: service_healthy
+  app:
+    build: ./
+    container_name: app
+    command: >
+      sh -c "python /app/src/add_csv.py && exec streamlit run /app/src/app.py --server.port=8501 --server.address=0.0.0.0"
+    volumes:
+      - ./:/app
+    ports:
+      - 8501:8501
+    image: fuzzy_search_streamlit:latest
+    env_file:
+      - .env
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
 
 volumes:
   elastic_data:
